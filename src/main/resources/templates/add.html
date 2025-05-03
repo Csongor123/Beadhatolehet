@@ -47,7 +47,7 @@
         <div class="add-participant-container">
             <h2>Új résztvevő hozzáadása</h2>
 
-            <form th:action="@{/add-participant}" th:object="${participant}" method="post">
+            <form action="#" th:action="@{/add-participant}" th:object="${participant}" method="post">
                 <label for="name">Név:</label>
                 <input type="text" th:field="*{name}" id="name" required><br>
 
@@ -55,7 +55,17 @@
                 <input type="number" th:field="*{age}" id="age" min="0" max="99" required><br>
 
                 <label for="email">Email:</label>
-                <input type="email" th:field="*{email}" id="email" required><br>
+                <input type="email"
+                       th:field="*{email}"
+                       id="email"
+                       pattern=".*\.(com|hu)$"
+                       title="Az e-mail végződése .com vagy .hu kell legyen."
+                       required><br>
+                <div th:if="${#fields.hasErrors('email')}" class="text-danger">
+                    <p th:errors="*{email}">Hibás e-mail</p>
+                </div>
+
+
 
                 <label for="activityDate">Aktivitás dátuma:</label>
                 <input type="date" th:field="*{activityDate}" id="activityDate" required><br>

@@ -5,9 +5,11 @@ import com.example.sportesemenynyilvantartorendszer.model.Participant;
 import com.example.sportesemenynyilvantartorendszer.service.EventService;
 import com.example.sportesemenynyilvantartorendszer.service.ParticipantService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -145,20 +147,32 @@ public class WebController {
 
     @GetMapping("/add")
     public String showAddPage(Model model) {
-        model.addAttribute("participant", new Participant());
+        if (!model.containsAttribute("participant")) {
+            model.addAttribute("participant", new Participant());
+        }
         model.addAttribute("events", eventService.findAll().stream()
                 .sorted(Comparator.comparing(Event::getDate))
                 .toList());
         return "add";
     }
 
+
     @PostMapping("/add-participant")
     public String addParticipant(
-            @ModelAttribute Participant participant,
+            @Valid @ModelAttribute Participant participant,
+            BindingResult bindingResult,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String newEventName,
             @RequestParam(required = false) String newEventLocation,
             RedirectAttributes redirectAttributes) {
+
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute(
+    "org.springframework.validation.BindingResult.participant",
+        bindingResult);
+            redirectAttributes.addFlashAttribute("participant", participant);
+            return "redirect:/add";
+        }
 
         if (participant.getAge() < 0 || participant.getAge() > MAX_AGE) {
             redirectAttributes.addAttribute("error", "invalidAge");

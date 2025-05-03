@@ -30,3 +30,11 @@ jobs:
         with:
           name: jacoco-report
           path: target/site/jacoco
+
+      - name: Upload Built Jar Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+            name: app-jar
+            path: target/*.jar
+

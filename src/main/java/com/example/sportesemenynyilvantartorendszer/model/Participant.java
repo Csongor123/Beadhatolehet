@@ -1,6 +1,8 @@
 package com.example.sportesemenynyilvantartorendszer.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -31,7 +33,11 @@ public class Participant {
 
     private int age;
 
+    @Email(message = "Érvénytelen e-mail cím formátum.")
+    @Pattern(regexp = ".*\\.(com|hu)$", message =
+"Az e-mail végződése .com vagy .hu kell legyen.")
     private String email;
+
 
     private LocalDate activityDate;
 

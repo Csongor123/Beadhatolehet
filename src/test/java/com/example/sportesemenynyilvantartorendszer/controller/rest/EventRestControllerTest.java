@@ -1,208 +1,121 @@
-/*package com.example.sportesemenynyilvantartorendszer.controller;
+package com.example.sportesemenynyilvantartorendszer.controller.rest;
 
+
+
+import com.example.sportesemenynyilvantartorendszer.controller.EventRestController;
+import com.example.sportesemenynyilvantartorendszer.exception.NoSuchEntityException;
 import com.example.sportesemenynyilvantartorendszer.model.Event;
-import com.example.sportesemenynyilvantartorendszer.repository.EventRepository;
-import com.example.sportesemenynyilvantartorendszer.service.EventServiceImpl;
+import com.example.sportesemenynyilvantartorendszer.service.EventService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.ResponseEntity;
 
-import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
-class EventServiceTest {
+class EventRestControllerTest {
 
     @Mock
-    private EventRepository eventRepository;
+    private EventService eventService;
 
     @InjectMocks
-    private EventServiceImpl eventService;
-
-    private Event testEvent;
-    private LocalDateTime now;
+    private EventRestController eventRestController;
 
     @BeforeEach
     void setUp() {
-        now = LocalDateTime.now();
-
-        testEvent = new Event();
-        testEvent.setId(1L);
-        testEvent.setName("Test Event");
-        testEvent.setDescription("Test Description");
-        testEvent.setEventDate(now.plusDays(30));
-        testEvent.setLocation("Test Location");
-        testEvent.setMaxParticipants(100);
-        testEvent.setRegistrationDeadline(now.plusDays(15));
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    void getAllEvents_ShouldReturnAllEvents() {
-        // Arrange
-        Event event1 = new Event();
-        event1.setId(1L);
-        event1.setName("Event 1");
+    void testGetAllEvents() {
+        when(eventService.findAll()).thenReturn(List.of(new Event(), new Event()));
 
-        Event event2 = new Event();
-        event2.setId(2L);
-        event2.setName("Event 2");
+        List<Event> result = eventRestController.getAllEvents();
 
-        List<Event> expectedEvents = Arrays.asList(event1, event2);
-
-        when(eventRepository.findAll()).thenReturn(expectedEvents);
-
-        // Act
-        List<Event> actualEvents = eventService.getAllEvents();
-
-        // Assert
-        assertEquals(expectedEvents.size(), actualEvents.size());
-        assertEquals(expectedEvents, actualEvents);
-        verify(eventRepository, times(1)).findAll();
+        assertEquals(2, result.size());
+        verify(eventService).findAll();
     }
 
     @Test
-    void getEventById_WhenEventExists_ShouldReturnEvent() {
-        // Arrange
-        when(eventRepository.findById(1L)).thenReturn(Optional.of(testEvent));
+    void testGetEventById_found() {
+        Event event = new Event();
+        event.setId(1L);
+        when(eventService.findById(1L)).thenReturn(Optional.of(event));
 
-        // Act
-        Optional<Event> result = eventService.getEventById(1L);
+        ResponseEntity<Event> response = eventRestController.getEventById(1L);
 
-        // Assert
-        assertTrue(result.isPresent());
-        assertEquals(testEvent, result.get());
-        verify(eventRepository, times(1)).findById(1L);
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(event, response.getBody());
     }
 
     @Test
-    void getEventById_WhenEventDoesNotExist_ShouldReturnEmpty() {
-        // Arrange
-        when(eventRepository.findById(99L)).thenReturn(Optional.empty());
+    void testGetEventById_notFound() {
+        when(eventService.findById(99L)).thenReturn(Optional.empty());
 
-        // Act
-        Optional<Event> result = eventService.getEventById(99L);
-
-        // Assert
-        assertFalse(result.isPresent());
-        verify(eventRepository, times(1)).findById(99L);
+        assertThrows(NoSuchEntityException.class, () -> eventRestController.getEventById(99L));
     }
 
     @Test
-    void createEvent_ShouldSaveAndReturnEvent() {
-        // Arrange
-        when(eventRepository.save(any(Event.class))).thenReturn(testEvent);
+    void testGetEventsByCategory() {
+        when(eventService.findByCategory("Futás")).thenReturn(List.of(new Event()));
 
-        // Act
-        Event savedEvent = eventService.createEvent(testEvent);
+        List<Event> result = eventRestController.getEventsByCategory("Futás");
 
-        // Assert
-        assertNotNull(savedEvent);
-        assertEquals(testEvent, savedEvent);
-        verify(eventRepository, times(1)).save(testEvent);
+        assertEquals(1, result.size());
+        verify(eventService).findByCategory("Futás");
     }
 
     @Test
-    void updateEvent_WhenEventExists_ShouldUpdateAndReturnEvent() {
-        // Arrange
-        Event eventToUpdate = new Event();
-        eventToUpdate.setName("Updated Name");
-        eventToUpdate.setDescription("Updated Description");
-        eventToUpdate.setLocation("Updated Location");
+    void testCreateEvent() {
+        Event event = new Event();
+        when(eventService.save(event)).thenReturn(event);
 
-        when(eventRepository.findById(1L)).thenReturn(Optional.of(testEvent));
-        when(eventRepository.save(any(Event.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        Event result = eventRestController.createEvent(event);
 
-        // Act
-        Event updatedEvent = eventService.updateEvent(1L, eventToUpdate);
-
-        // Assert
-        assertNotNull(updatedEvent);
-        assertEquals("Updated Name", updatedEvent.getName());
-        assertEquals("Updated Description", updatedEvent.getDescription());
-        assertEquals("Updated Location", updatedEvent.getLocation());
-        verify(eventRepository, times(1)).findById(1L);
-        verify(eventRepository, times(1)).save(any(Event.class));
+        assertEquals(event, result);
     }
 
     @Test
-    void updateEvent_WhenEventDoesNotExist_ShouldReturnNull() {
-        // Arrange
-        when(eventRepository.findById(99L)).thenReturn(Optional.empty());
+    void testUpdateEvent_found() {
+        Event updated = new Event();
+        updated.setName("Updated");
+        when(eventService.findById(1L)).thenReturn(Optional.of(new Event()));
+        when(eventService.save(updated)).thenReturn(updated);
 
-        // Act
-        Event result = eventService.updateEvent(99L, new Event());
+        ResponseEntity<Event> response = eventRestController.updateEvent(1L, updated);
 
-        // Assert
-        assertNull(result);
-        verify(eventRepository, times(1)).findById(99L);
-        verify(eventRepository, never()).save(any(Event.class));
+        assertEquals(200, response.getStatusCodeValue());
+        assertEquals(updated, response.getBody());
     }
 
     @Test
-    void deleteEvent_WhenEventExists_ShouldReturnTrue() {
-        // Arrange
-        when(eventRepository.existsById(1L)).thenReturn(true);
-        doNothing().when(eventRepository).deleteById(1L);
+    void testUpdateEvent_notFound() {
+        Event updated = new Event();
+        when(eventService.findById(999L)).thenReturn(Optional.empty());
 
-        // Act
-        boolean result = eventService.deleteEvent(1L);
-
-        // Assert
-        assertTrue(result);
-        verify(eventRepository, times(1)).existsById(1L);
-        verify(eventRepository, times(1)).deleteById(1L);
+        assertThrows(NoSuchEntityException.class, () -> eventRestController.updateEvent(999L, updated));
     }
 
     @Test
-    void deleteEvent_WhenEventDoesNotExist_ShouldReturnFalse() {
-        // Arrange
-        when(eventRepository.existsById(99L)).thenReturn(false);
+    void testDeleteEvent_found() {
+        when(eventService.findById(1L)).thenReturn(Optional.of(new Event()));
 
-        // Act
-        boolean result = eventService.deleteEvent(99L);
+        ResponseEntity<Void> response = eventRestController.deleteEvent(1L);
 
-        // Assert
-        assertFalse(result);
-        verify(eventRepository, times(1)).existsById(99L);
-        verify(eventRepository, never()).deleteById(any());
+        assertEquals(204, response.getStatusCodeValue());
+        verify(eventService).deleteById(1L);
     }
 
     @Test
-    void getUpcomingEvents_ShouldReturnFutureEvents() {
-        // Arrange
-        List<Event> upcomingEvents = Arrays.asList(testEvent);
-        when(eventRepository.findByEventDateAfter(any(LocalDateTime.class))).thenReturn(upcomingEvents);
+    void testDeleteEvent_notFound() {
+        when(eventService.findById(100L)).thenReturn(Optional.empty());
 
-        // Act
-        List<Event> result = eventService.getUpcomingEvents();
-
-        // Assert
-        assertEquals(upcomingEvents, result);
-        verify(eventRepository, times(1)).findByEventDateAfter(any(LocalDateTime.class));
-    }
-
-    @Test
-    void getEventsWithOpenRegistration_ShouldReturnEventsWithFutureDeadlines() {
-        // Arrange
-        List<Event> eventsWithOpenRegistration = Arrays.asList(testEvent);
-        when(eventRepository.findByRegistrationDeadlineAfter(any(LocalDateTime.class)))
-                .thenReturn(eventsWithOpenRegistration);
-
-        // Act
-        List<Event> result = eventService.getEventsWithOpenRegistration();
-
-        // Assert
-        assertEquals(eventsWithOpenRegistration, result);
-        verify(eventRepository, times(1)).findByRegistrationDeadlineAfter(any(LocalDateTime.class));
+        assertThrows(NoSuchEntityException.class, () -> eventRestController.deleteEvent(100L));
     }
 }
-*/
